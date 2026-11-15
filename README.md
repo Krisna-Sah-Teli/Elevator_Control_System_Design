@@ -1,9 +1,9 @@
-# 3-Floor Elevator FSM --- ESP8266 NodeMCU
+# Three-Floor Elevator Control System
 
-An event-based, three-floor elevator simulation implemented in Arduino
-C++ for the ESP8266 NodeMCU. The program uses a finite state machine
-(FSM), interrupt-driven button events, a pending-request register, and
-`millis()`-based timing.
+An event-based elevator simulation for an ESP8266 NodeMCU, written as an
+Arduino sketch. It models three floors with a finite state machine (FSM),
+interrupt-driven button inputs, queued floor requests, and non-blocking
+travel and door timers.
 
 ## Features
 
@@ -24,22 +24,21 @@ C++ for the ESP8266 NodeMCU. The program uses a finite state machine
 -   CLEAR button to leave emergency mode.
 -   Serial Monitor messages for state and event feedback.
 
-> This is an educational simulation. It does not control a real elevator
-> and does not implement certified elevator safety functions.
+
 
 ## Hardware and pin mapping
 
-  Function                       NodeMCU pin   ESP8266 GPIO
-  --------------------- -------------------- --------------
-  Floor 1 LED                             D0         GPIO16
-  Floor 2 LED                             D7         GPIO13
-  Floor 3 LED                             D8         GPIO15
-  Floor 1 button                          D1          GPIO5
-  Floor 2 button                          D2          GPIO4
-  Floor 3 button                          D3          GPIO0
-  Emergency button                        D6         GPIO12
-  CLEAR button                            D5         GPIO14
-  Emergency indicator     `LED_BUILTIN` (D4)          GPIO2
+| Function | NodeMCU pin | ESP8266 GPIO |
+| --- | --- | --- |
+| Floor 1 LED | D0 | GPIO16 |
+| Floor 2 LED | D7 | GPIO13 |
+| Floor 3 LED | D8 | GPIO15 |
+| Floor 1 button | D1 | GPIO5 |
+| Floor 2 button | D2 | GPIO4 |
+| Floor 3 button | D3 | GPIO0 |
+| Emergency button | D6 | GPIO12 |
+| CLEAR button | D5 | GPIO14 |
+| Emergency indicator | `LED_BUILTIN` (D4) | GPIO2 |
 
 ### Button wiring
 
@@ -66,26 +65,13 @@ wiring.
 
 ## FSM states
 
-  -----------------------------------------------------------------------
-  State                               Purpose
-  ----------------------------------- -----------------------------------
-  `IDLE`                              Waits for pending requests and
-                                      starts a trip when one exists.
-
-  `UP`                                Advances one floor after each
-                                      `FLOOR_TRAVEL_TIME` interval.
-
-  `DOWN`                              Decreases one floor after each
-                                      `FLOOR_TRAVEL_TIME` interval.
-
-  `DOOR_OPEN`                         Holds the door-open phase, then
-                                      performs a door-closing phase.
-
-  `EMERGENCY`                         Overrides normal operation, lights
-                                      the built-in LED, discards
-                                      floor-button events received during
-                                      emergency, and waits for CLEAR.
-  -----------------------------------------------------------------------
+| State | Purpose |
+| --- | --- |
+| `IDLE` | Waits for pending requests and starts a trip when one exists. |
+| `UP` | Advances one floor after each `FLOOR_TRAVEL_TIME` interval. |
+| `DOWN` | Decreases one floor after each `FLOOR_TRAVEL_TIME` interval. |
+| `DOOR_OPEN` | Runs the door-open interval followed by the door-closing interval. |
+| `EMERGENCY` | Lights the built-in LED, ignores floor-button events, and waits for CLEAR. |
 
 ## Request handling
 
@@ -151,18 +137,18 @@ physical elevator.
 
 ## Setup and operation
 
-1.  Wire the LEDs and buttons according to the pin table.
-2.  Install the ESP8266 board package in the Arduino IDE and select the
-    appropriate NodeMCU ESP8266 board.
-3.  Open `elevator_multiple_inputs.ino`.
-4.  Upload the sketch.
-5.  Open Serial Monitor at **115200 baud**.
-6.  The system starts at Floor 1 and lights the Floor 1 LED.
-7.  Press one or more floor buttons. The requests are stored and
-    serviced according to the scheduling rules.
-8.  Press the emergency button to enter emergency mode.
-9.  Press and hold CLEAR until the system reports that the emergency is
-    cleared; release it to complete the operation.
+1. Wire the buttons and LEDs according to the pin table. Buttons connect
+    between their input pin and GND; use a current-limiting resistor with
+    each external LED.
+2. Install the ESP8266 board package in Arduino IDE and select the
+    NodeMCU ESP8266 board that matches your hardware.
+3. Open `elevator_multiple_inputs/elevator_multiple_inputs.ino`.
+4. Select the connected board and port, then upload the sketch.
+5. Open Serial Monitor at **115200 baud**.
+6. The simulation starts at Floor 1. Press one or more floor buttons to
+    queue requests; press the emergency button to enter emergency mode.
+    Press and hold CLEAR until the emergency-cleared message appears,
+    then release it.
 
 ## Important code sections
 
@@ -184,35 +170,3 @@ physical elevator.
 -   **`processClearButton()`:** clears emergency mode.
 -   **`setup()` / `loop()`:** configure hardware and coordinate the FSM.
 
-## Recommended review items
-
-These are review recommendations; they are not changes made to the
-attached sketch.
-
-1.  Declare `emergencyPressed` as
-    `volatile bool emergencyPressed = false;` because it is written by
-    `emergencyISR()` and read in normal program context. The floor event
-    flags are already declared `volatile`.
-2.  Consider using a short critical section when copying and clearing
-    ISR event flags, to avoid a race between the ISR setting a flag and
-    the main loop clearing it.
-3.  Consider debouncing the floor and emergency inputs in a deliberate
-    way. The latches prevent repeated processing while a button remains
-    held, but they are not a full time-based electrical debounce filter.
-4.  Validate the use of D3/GPIO0 and D8/GPIO15 with the actual circuit
-    during reset, because they are ESP8266 boot-strapping pins.
-5.  For any real elevator, use certified controllers, safety circuits,
-    braking, door interlocks, limit switches, redundant sensing, and
-    applicable standards. A microcontroller demonstration like this must
-    not be used as a real elevator controller.
-
-## Project files
-
--   `elevator_multiple_inputs.ino` --- Arduino sketch.
--   `README.md` --- setup, pinout, behaviour, and code overview.
--   `Elevator_FSM_Project_Report.docx` / `.pdf` --- project report.
-
-## License
-
-No license was specified in the supplied source. Add a license before
-redistributing the project if required.
